@@ -846,6 +846,90 @@ class MPM_Simulator_WARP:
         self.grid_postprocess.append(collide)
         self.modify_bc.append(None)
 
+    # SDF collider: a static rigid mesh baked into a signed distance field on
+    # the MPM grid.  Collision is applied to the grid velocity field grid_v_out
+    # (MPM-canonical), so soft-body deformation is driven naturally by the
+    # corrected velocity field with no per-particle penetration accumulation.
+    def add_sdf_collider(
+        self,
+        sdf_grid_np,
+        friction=0.0,
+        restitution=0.0,
+        threshold=None,
+        start_time=0.0,
+        end_time=1e3,
+        device="cuda:0",
+    ):
+        n_grid = self.mpm_model.n_grid
+        assert sdf_grid_np.shape == (n_grid, n_grid, n_grid), (
+            f"SDF grid shape {sdf_grid_np.shape} must match MPM n_grid {n_grid}"
+        )
+        dx = float(self.mpm_model.dx)
+        if threshold is None:
+            # default band ~ one cell: catch nodes near the surface
+            threshold = dx
+
+        collider_param = SDFCollider()
+        collider_param.sdf = wp.from_numpy(
+            np.ascontiguousarray(sdf_grid_np, dtype=np.float32),
+            dtype=float,
+            device=device,
+        )
+        collider_param.n_grid = n_grid
+        collider_param.dx = dx
+        collider_param.threshold = float(threshold)
+        collider_param.friction = float(friction)
+        collider_param.restitution = float(restitution)
+        collider_param.start_time = float(start_time)
+        collider_param.end_time = float(end_time)
+        self.collider_params.append(collider_param)
+
+        @wp.kernel
+        def collide(
+            time: float,
+            dt: float,
+            state: MPMStateStruct,
+            model: MPMModelStruct,
+            param: SDFCollider,
+        ):
+            gx, gy, gz = wp.tid()
+            if time >= param.start_time and time < param.end_time:
+                d = param.sdf[gx, gy, gz]
+                if d < param.threshold:
+                    ng = param.n_grid
+                    # central-difference gradient (clamped at borders) = normal
+                    xm = wp.max(gx - 1, 0)
+                    xp = wp.min(gx + 1, ng - 1)
+                    ym = wp.max(gy - 1, 0)
+                    yp = wp.min(gy + 1, ng - 1)
+                    zm = wp.max(gz - 1, 0)
+                    zp = wp.min(gz + 1, ng - 1)
+                    nx = param.sdf[xp, gy, gz] - param.sdf[xm, gy, gz]
+                    ny = param.sdf[gx, yp, gz] - param.sdf[gx, ym, gz]
+                    nz = param.sdf[gx, gy, zp] - param.sdf[gx, gy, zm]
+                    n = wp.vec3(nx, ny, nz)
+                    n_len = wp.length(n)
+                    if n_len > 1e-10:
+                        n = n / n_len
+                        v = state.grid_v_out[gx, gy, gz]
+                        vn = wp.dot(v, n)
+                        # only resist motion INTO the surface (thin-shell safe)
+                        if vn < 0.0:
+                            vt = v - vn * n
+                            vt_mag = wp.length(vt)
+                            # normal impulse magnitude
+                            jn = (1.0 + param.restitution) * (-vn)
+                            # Coulomb: subtract friction impulse, |jt| <= mu*jn
+                            dvt = wp.min(param.friction * jn, vt_mag)
+                            new_vt = vt
+                            if vt_mag > 1e-12:
+                                new_vt = vt * (1.0 - dvt / vt_mag)
+                            new_vn = -param.restitution * vn
+                            state.grid_v_out[gx, gy, gz] = new_vt + new_vn * n
+
+        self.grid_postprocess.append(collide)
+        self.modify_bc.append(None)
+
     # particle_v += force/particle_mass * dt
     # this is applied from start_dt, ends after num_dt p2g2p's
     # particle velocity is changed before p2g at each timestep

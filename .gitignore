@@ -7,3 +7,8 @@ output
 *.jpg
 model
 log
+__pycache__/
+*.pyd
+*.egg-info/
+build/
+dist/

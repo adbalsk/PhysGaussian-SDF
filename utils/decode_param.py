@@ -145,7 +145,7 @@ def decode_param_json(json_file):
     else:
         preprocessing_params["scale"] = 1.0
 
-    if "particle_filling" in sim_params.keys():
+    if "particle_filling" in sim_params.keys() and sim_params["particle_filling"] is not None:
         preprocessing_params["particle_filling"] = sim_params["particle_filling"]
         filling_params = preprocessing_params["particle_filling"]
         if not "n_grid" in filling_params.keys():

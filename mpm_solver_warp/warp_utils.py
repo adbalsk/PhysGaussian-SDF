@@ -1,5 +1,5 @@
+import warp
 import warp as wp
-import warp.torch
 import torch
 
 
@@ -178,6 +178,20 @@ class ParticleVelocityModifier:
     mask: wp.array(dtype=int)
 
 
+@wp.struct
+class SDFCollider:
+    # SDF baked onto the MPM grid (same resolution as grid_m).
+    # sdf[i, j, k] is the signed distance at grid node (i, j, k).
+    sdf: wp.array(dtype=float, ndim=3)
+    n_grid: int
+    dx: float
+    threshold: float        # collision band: respond when sdf < threshold
+    friction: float         # Coulomb friction coefficient
+    restitution: float      # normal restitution (0 = no bounce)
+    start_time: float
+    end_time: float
+
+
 @wp.kernel
 def set_vec3_to_zero(target_array: wp.array(dtype=wp.vec3)):
     tid = wp.tid()
@@ -230,84 +244,39 @@ def get_float_array_product(
     arrayC[tid] = arrayA[tid] * arrayB[tid]
 
 
-def torch2warp_quat(t, copy=False, dtype=warp.types.float32, dvc="cuda:0"):
+def torch2warp_quat(t, copy=False, dtype=wp.float32, dvc="cuda:0"):
     assert t.is_contiguous()
     if t.dtype != torch.float32 and t.dtype != torch.int32:
         raise RuntimeError(
             "Error aliasing Torch tensor to Warp array. Torch tensor must be float32 or int32 type"
         )
     assert t.shape[1] == 4
-    a = warp.types.array(
-        ptr=t.data_ptr(),
-        dtype=wp.quat,
-        shape=t.shape[0],
-        copy=False,
-        owner=False,
-        requires_grad=t.requires_grad,
-        # device=t.device.type)
-        device=dvc,
-    )
-    a.tensor = t
-    return a
+    return wp.from_torch(t, dtype=wp.quat)
 
 
-def torch2warp_float(t, copy=False, dtype=warp.types.float32, dvc="cuda:0"):
+def torch2warp_float(t, copy=False, dtype=wp.float32, dvc="cuda:0"):
     assert t.is_contiguous()
     if t.dtype != torch.float32 and t.dtype != torch.int32:
         raise RuntimeError(
             "Error aliasing Torch tensor to Warp array. Torch tensor must be float32 or int32 type"
         )
-    a = warp.types.array(
-        ptr=t.data_ptr(),
-        dtype=warp.types.float32,
-        shape=t.shape[0],
-        copy=False,
-        owner=False,
-        requires_grad=t.requires_grad,
-        # device=t.device.type)
-        device=dvc,
-    )
-    a.tensor = t
-    return a
+    return wp.from_torch(t, dtype=wp.float32)
 
 
-def torch2warp_vec3(t, copy=False, dtype=warp.types.float32, dvc="cuda:0"):
+def torch2warp_vec3(t, copy=False, dtype=wp.float32, dvc="cuda:0"):
     assert t.is_contiguous()
     if t.dtype != torch.float32 and t.dtype != torch.int32:
         raise RuntimeError(
             "Error aliasing Torch tensor to Warp array. Torch tensor must be float32 or int32 type"
         )
     assert t.shape[1] == 3
-    a = warp.types.array(
-        ptr=t.data_ptr(),
-        dtype=wp.vec3,
-        shape=t.shape[0],
-        copy=False,
-        owner=False,
-        requires_grad=t.requires_grad,
-        # device=t.device.type)
-        device=dvc,
-    )
-    a.tensor = t
-    return a
+    return wp.from_torch(t, dtype=wp.vec3)
 
 
-def torch2warp_mat33(t, copy=False, dtype=warp.types.float32, dvc="cuda:0"):
+def torch2warp_mat33(t, copy=False, dtype=wp.float32, dvc="cuda:0"):
     assert t.is_contiguous()
     if t.dtype != torch.float32 and t.dtype != torch.int32:
         raise RuntimeError(
             "Error aliasing Torch tensor to Warp array. Torch tensor must be float32 or int32 type"
         )
-    assert t.shape[1] == 3
-    a = warp.types.array(
-        ptr=t.data_ptr(),
-        dtype=wp.mat33,
-        shape=t.shape[0],
-        copy=False,
-        owner=False,
-        requires_grad=t.requires_grad,
-        # device=t.device.type)
-        device=dvc,
-    )
-    a.tensor = t
-    return a
+    return wp.from_torch(t, dtype=wp.mat33)
