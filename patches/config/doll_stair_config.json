@@ -1,0 +1,58 @@
+{
+    "opacity_threshold": 0.02,
+    "rotation_degree": [0.0],
+    "rotation_axis": [0],
+    "substep_dt": 5e-4,
+    "frame_dt": 2e-2,
+    "frame_num": 400,
+    "material": "jelly",
+    "E": 8e3,
+    "nu": 0.4,
+    "yield_stress": 50.0,
+    "density": 300,
+    "grid_v_damping_scale": 0.9995,
+    "rpic_damping": 0.05,
+    "g": [0.0, 0.0, -4.0],
+    "scale": 0.4,
+    "n_grid": 100,
+    "grid_lim": 2.0,
+    "particle_filling": null,
+    "boundary_conditions": [
+        {
+            "type": "bounding_box"
+        }
+    ],
+    "stair_params": {
+        "obj": "./model/stair.obj",
+        "fit_size": 1.5,
+        "rotation_degree": [],
+        "rotation_axis": [],
+        "translate": [1.0, 1.05, 0.85],
+        "friction": 0.35,
+        "restitution": 0.0,
+        "threshold": null,
+        "color": [0.55, 0.56, 0.60],
+        "samples_per_area": 8000.0,
+        "opacity": 0.995
+    },
+    "floor_params": {
+        "z": 0.10,
+        "friction": 0.4,
+        "restitution": 0.0,
+        "color": [0.82, 0.82, 0.80],
+        "half_extent": 1.8,
+        "samples_per_area": 4000.0,
+        "opacity": 0.995
+    },
+    "mpm_space_vertical_upward_axis": [0, 0, 1],
+    "mpm_space_viewpoint_center": [1.0, 1.0, 1.0],
+    "default_camera_index": -1,
+    "show_hint": false,
+    "init_azimuthm": 90,
+    "init_elevation": 8,
+    "init_radius": 4.5,
+    "move_camera": false,
+    "delta_a": 0.0,
+    "delta_e": 0.0,
+    "delta_r": 0.0
+}

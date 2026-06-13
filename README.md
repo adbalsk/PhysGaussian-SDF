@@ -65,6 +65,30 @@ git clone --recurse-submodules https://github.com/adbalsk/PhysGaussian-SDF.git
 cd PhysGaussian-SDF
 ```
 
+### Apply patches
+
+The `patches/` directory mirrors the modified/added files. After cloning, copy them over the corresponding locations:
+
+```bash
+cp -r patches/mpm_solver_warp/. mpm_solver_warp/
+cp -r patches/utils/. utils/
+cp -r patches/scripts/. scripts/
+cp -r patches/config/. config/
+cp patches/gaussian-splatting/submodules/diff-gaussian-rasterization/setup.py \
+   gaussian-splatting/submodules/diff-gaussian-rasterization/
+cp patches/gaussian-splatting/submodules/simple-knn/setup.py \
+   gaussian-splatting/submodules/simple-knn/
+cp patches/gaussian-splatting/submodules/simple-knn/simple_knn/__init__.py \
+   gaussian-splatting/submodules/simple-knn/simple_knn/
+```
+
+Then install the submodules as usual:
+
+```bash
+pip install -e gaussian-splatting/submodules/diff-gaussian-rasterization/
+pip install -e gaussian-splatting/submodules/simple-knn/
+```
+
 ---
 
 ## Usage
